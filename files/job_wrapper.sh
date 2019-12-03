@@ -120,8 +120,10 @@ setup_singularity(){
         mkdir -p $cache_loc # create our cache dir, if already exists will not fail
 
         if [ ! -f $cache_loc/$DOCKER_IMG ]; then
-            # Pull image to cache_loc
+            # Pull image to cache_loc if not there
             $CONTAINER_PATH pull $cache_loc/$DOCKER_IMG docker://$DOCKER_IMG
+            CNTR_ARGUMENTS="exec -B ./$REANA_WORKFLOW_DIR:$REANA_WORKFLOW_DIR $cache_loc/$DOCKER_IMG"
+        else
             CNTR_ARGUMENTS="exec -B ./$REANA_WORKFLOW_DIR:$REANA_WORKFLOW_DIR $cache_loc/$DOCKER_IMG"
         fi
     else
