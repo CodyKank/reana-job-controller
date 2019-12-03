@@ -111,7 +111,23 @@ setup_singularity(){
         CONTAINER_ENV="SINGULARITY_CACHEDIR=\"\$SCRATCH\""
     fi
 
-    CNTR_ARGUMENTS="exec -B ./$REANA_WORKFLOW_DIR:$REANA_WORKFLOW_DIR docker://$DOCKER_IMG"
+    # Attempt sif caching into /tmp, should be writable to all users if available
+    # Note: This caching is weak and will only persist as long as the VC3 pilot lives on
+    # the particular worker node this is stored on.
+
+    if [ -w /tmp ]; then
+        local cache_loc=/tmp/scailfin/$USER/
+        mkdir -p $cache_loc # create our cache dir, if already exists will not fail
+
+        if [ ! -f $cache_loc/$DOCKER_IMG ]; then
+            # Pull image to cache_loc
+            $CONTAINER_PATH pull $cache_loc/$DOCKER_IMG docker://$DOCKER_IMG
+            CNTR_ARGUMENTS="exec -B ./$REANA_WORKFLOW_DIR:$REANA_WORKFLOW_DIR $cache_loc/$DOCKER_IMG"
+        fi
+    else
+        CNTR_ARGUMENTS="exec -B ./$REANA_WORKFLOW_DIR:$REANA_WORKFLOW_DIR docker://$DOCKER_IMG"
+
+    fi
 
 }
 
@@ -142,14 +158,14 @@ setup_shifter(){
 setup_container(){
     # Need to cleanup to make more automated.
     # i.e. run through the same list in find_container
-    local container=$(basename "$CONTAINER_PATH")
+    CONTAINER=$(basename "$CONTAINER_PATH")
 
     if [ "$container" == "singularity" ]; then
         setup_singularity 
     elif [ "$container" == "shifter" ]; then
         CNTR_ARGUMENTS=$(setup_shifter)
     else
-        echo "Error: Unrecognized container: $(basename $CONTAINER_PATH)" >&2
+        echo "Error: Unrecognized container: $CONTAINER" >&2
         exit 127
     fi
 }
