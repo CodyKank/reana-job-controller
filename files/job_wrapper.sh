@@ -120,11 +120,11 @@ setup_singularity(){
         mkdir -p $cache_loc # create our cache dir, if already exists will not fail
 
         if [ ! -f $cache_loc/$DOCKER_IMG ]; then
-            # Pull image to cache_loc if not there
-            $CONTAINER_PATH pull $cache_loc/$DOCKER_IMG docker://$DOCKER_IMG
-            CNTR_ARGUMENTS="exec -B ./$REANA_WORKFLOW_DIR:$REANA_WORKFLOW_DIR $cache_loc/$DOCKER_IMG"
+            # Pull image to cache_loc if not there. Take out any "/" from container name
+            $CONTAINER_PATH pull $cache_loc/${DOCKER_IMG//\//_} docker://$DOCKER_IMG
+            CNTR_ARGUMENTS="exec -B ./$REANA_WORKFLOW_DIR:$REANA_WORKFLOW_DIR $cache_loc/${DOCKER_IMG//\//_}"
         else
-            CNTR_ARGUMENTS="exec -B ./$REANA_WORKFLOW_DIR:$REANA_WORKFLOW_DIR $cache_loc/$DOCKER_IMG"
+            CNTR_ARGUMENTS="exec -B ./$REANA_WORKFLOW_DIR:$REANA_WORKFLOW_DIR $cache_loc/${DOCKER_IMG//\//_}"
         fi
     else
         CNTR_ARGUMENTS="exec -B ./$REANA_WORKFLOW_DIR:$REANA_WORKFLOW_DIR docker://$DOCKER_IMG"
@@ -144,7 +144,8 @@ setup_shifter(){
     fi
 
     # Attempt to pull image into image-gateway
-    if ! shifterimg pull "$DOCKER_IMG" >/dev/null 2>&1; then
+#    if ! shifterimg pull "$DOCKER_IMG" >/dev/null 2>&1; then
+    if ! time shifterimg pull "$DOCKER_IMG"; then
         echo "Error: Could not pull img: $DOCKER_IMG" >&2 
         exit 127
     fi
@@ -162,9 +163,9 @@ setup_container(){
     # i.e. run through the same list in find_container
     CONTAINER=$(basename "$CONTAINER_PATH")
 
-    if [ "$container" == "singularity" ]; then
+    if [ "$CONTAINER" == "singularity" ]; then
         setup_singularity 
-    elif [ "$container" == "shifter" ]; then
+    elif [ "$CONTAINER" == "shifter" ]; then
         CNTR_ARGUMENTS=$(setup_shifter)
     else
         echo "Error: Unrecognized container: $CONTAINER" >&2
